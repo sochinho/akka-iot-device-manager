@@ -1,6 +1,9 @@
+import java.util.concurrent.TimeUnit
+
 import akka.testkit.{AkkaSpec, TestProbe}
-import com.sochinho.Device
-import org.scalatest._
+import com.sochinho.{Device, DeviceManager}
+
+import scala.concurrent.duration.FiniteDuration
 
 class DeviceSpec extends AkkaSpec {
 
@@ -33,5 +36,25 @@ class DeviceSpec extends AkkaSpec {
     val response2 = probe.expectMsgType[Device.RespondTemperature]
     response2.requestId should ===(4L)
     response2.value should ===(Some(55.0))
+  }
+
+  "reply to registration requests" in {
+    val probe = TestProbe()
+    val deviceActor = system.actorOf(Device.props("group", "device"))
+
+    deviceActor.tell(DeviceManager.RequestTrackDevice("group", "device"), probe.ref)
+    probe.expectMsg(DeviceManager.DeviceRegistered)
+    probe.lastSender should ===(deviceActor)
+  }
+
+  "ignore wrong registration requests" in {
+    val probe = TestProbe()
+    val deviceActor = system.actorOf(Device.props("group", "device"))
+
+    deviceActor.tell(DeviceManager.RequestTrackDevice("wrongGroup", "device"), probe.ref)
+    probe.expectNoMsg(new FiniteDuration(500, TimeUnit.MILLISECONDS))
+
+    deviceActor.tell(DeviceManager.RequestTrackDevice("group", "Wrongdevice"), probe.ref)
+    probe.expectNoMsg(new FiniteDuration(500, TimeUnit.MILLISECONDS))
   }
 }

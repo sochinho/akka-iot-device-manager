@@ -1,27 +1,25 @@
 package com.sochinho
 
-import akka.actor.{ Actor, ActorLogging, Props }
+import akka.actor.typed.{Behavior, PostStop, Signal}
+import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 
 object IotSupervisor {
-  def props(): Props = Props(new IotSupervisor)
+
+  def apply(): Behavior[Nothing] = Behaviors.setup[Nothing](context => new IotSupervisor(context))
 }
 
-class IotSupervisor extends Actor with ActorLogging {
-  override def preStart(): Unit = log.info("IoT Application Started")
-  override def postStop(): Unit = log.info("IoT Application Stopped")
+class IotSupervisor(context: ActorContext[Nothing]) extends AbstractBehavior[Nothing](context) {
 
-  override def receive: Receive = Actor.emptyBehavior
-}
+  context.log.info("IoT Application started")
 
-object Main extends App {
-
-  object WeekDay extends Enumeration {
-    type WeekDay = Value
-    val Mon, Tue, Wed, Thu, Fri, Sat, Sun = Value
+  override def onMessage(msg: Nothing): Behavior[Nothing] = {
+    // No need to handle any messages
+    Behaviors.unhandled
   }
-  import WeekDay._
 
-  def isWorkingDay(d: WeekDay) = ! (d == Sat || d == Sun)
-
-  WeekDay.values filter isWorkingDay foreach println
+  override def onSignal: PartialFunction[Signal, Behavior[Nothing]] = {
+    case PostStop =>
+      context.log.info("IoT Application stopped")
+      this
+  }
 }
